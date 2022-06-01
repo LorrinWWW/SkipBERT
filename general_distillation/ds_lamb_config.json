@@ -1,0 +1,36 @@
+{
+    "train_batch_size": 2048,
+    "train_micro_batch_size_per_gpu": 256,
+    "steps_per_print": 1000,
+    "prescale_gradients": false,
+      
+    "optimizer": {
+        "type": "Lamb",
+        "params": {
+          "lr": 1e-3,
+          "weight_decay": 1e-3,
+          "bias_correction": false,
+          "max_coeff": 0.3,
+          "min_coeff": 0.01
+        }
+    },
+    "gradient_clipping": 1.0,
+      
+    "scheduler": {
+        "type": "WarmupDecayLR",
+        "params": {
+            "warmup_min_lr": 1e-4,
+            "warmup_max_lr": 1e-3,
+            "warmup_num_steps": 4000,
+            "total_num_steps": 1000000
+        }
+    },
+  
+    "wall_clock_breakdown": false,
+  
+    "fp16": {
+        "enabled": true,
+        "loss_scale": 0,
+        "initial_scale_power": 8.0
+    }
+}
