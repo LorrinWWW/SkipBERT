@@ -1,4 +1,4 @@
-"""PyTorch BERT model."""
+"""SkipBERT modeling"""
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
@@ -18,9 +18,8 @@ import transformers
 from transformers import BertPreTrainedModel, BertModel
 from transformers.models.bert.modeling_bert import BertEmbeddings, BertEncoder, BertPooler, BertLayer
 from transformers.models.bert.modeling_bert import BertPreTrainingHeads
+from transformers.modeling_outputs import SequenceClassifierOutput
 from . import plot
-
-import numba
 
 import logging
 logger = logging.getLogger(__name__)
@@ -145,6 +144,77 @@ class BertForPreTraining(BertPreTrainedModel):
         sequence_output = tmp
 
         return att_output, sequence_output
+    
+    
+    
+
+class BertForSequenceClassification(BertPreTrainedModel):
+    def __init__(self, config, do_fit=False, share_param=True):
+        super().__init__(config)
+        num_labels = config.num_labels
+        self.hidden_size = config.hidden_size
+        self.num_labels = num_labels
+        self.bert = BertModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Linear(config.hidden_size, num_labels)
+        
+        self.do_fit, self.share_param = do_fit, share_param
+        if self.do_fit:
+            fit_size = config.fit_size
+            self.fit_size = fit_size
+            if self.share_param:
+                self.fit_dense = nn.Linear(config.hidden_size, fit_size)
+            else:
+                self.fit_denses = nn.ModuleList(
+                    [nn.Linear(config.hidden_size, fit_size) for _ in range(config.num_hidden_layers + 1)]
+                )
+
+    def do_fit_dense(self, sequence_output):
+        
+        tmp = []
+        if self.do_fit:
+            for s_id, sequence_layer in enumerate(sequence_output):
+                if self.share_param:
+                    tmp.append(self.fit_dense(sequence_layer))
+                else:
+                    tmp.append(self.fit_denses[s_id](sequence_layer))
+            sequence_output = tmp
+            
+        return sequence_output
+
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None):
+
+        outputs = self.bert(input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask,
+                            output_hidden_states=True, output_attentions=True)
+        sequence_output, att_output, pooled_output = outputs.hidden_states, outputs.attentions, outputs.pooler_output
+        
+        logits = self.classifier(pooled_output)
+        
+        sequence_output = self.do_fit_dense(sequence_output)
+
+        return logits, att_output, sequence_output
+    
+    
+    
+class BertForSequenceClassificationPrediction(BertForSequenceClassification):
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None):
+        
+        assert not self.training
+        
+        _, pooled_output, sequence_output, att_output = self.bert(
+            input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask,
+            output_hidden_states=True, output_attentions=True)
+        
+        logits = self.classifier(pooled_output)
+        
+        loss = None
+        if labels is not None:
+            loss = torch.tensor(0.)
+
+        return SequenceClassifierOutput(
+            loss=loss,
+            logits=logits,
+        )
     
 
 class ShallowSkipping(nn.Module):
@@ -524,3 +594,74 @@ class SkipBertForPreTraining(BertPreTrainedModel):
             sequence_output = tmp
 
         return att_output, sequence_output
+
+    
+
+    
+class SkipBertForSequenceClassification(BertPreTrainedModel):
+    def __init__(self, config, do_fit=False, share_param=True):
+        super().__init__(config)
+        num_labels = config.num_labels
+        self.hidden_size = config.hidden_size
+        self.num_labels = num_labels
+        self.bert = SkipBertModel(config)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.classifier = nn.Linear(config.hidden_size, num_labels)
+        
+        self.do_fit, self.share_param = do_fit, share_param
+        if self.do_fit:
+            fit_size = config.fit_size
+            self.fit_size = fit_size
+            if self.share_param:
+                self.share_fit_dense = nn.Linear(config.hidden_size, fit_size)
+            else:
+                self.fit_denses = nn.ModuleList(
+                    [nn.Linear(config.hidden_size, fit_size) for _ in range(config.num_hidden_layers + 1)]
+                )
+
+    def do_fit_dense(self, sequence_output):
+        
+        tmp = []
+        if self.do_fit:
+            for s_id, sequence_layer in enumerate(sequence_output):
+                if self.share_param:
+                    tmp.append(self.share_fit_dense(sequence_layer))
+                else:
+                    tmp.append(self.fit_denses[s_id](sequence_layer))
+            sequence_output = tmp
+            
+        return sequence_output
+
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None):
+
+        _, pooled_output, sequence_output, att_output = self.bert(
+            input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask,
+            output_hidden_states=True, output_attentions=True)
+        
+        sequence_output = self.do_fit_dense(sequence_output)
+        
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+
+        return logits, att_output, sequence_output
+    
+
+class SkipBertForSequenceClassificationPrediction(SkipBertForSequenceClassification):
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None):
+        
+        assert not self.training
+        
+        _, pooled_output, sequence_output, att_output = self.bert(
+            input_ids=input_ids, token_type_ids=token_type_ids, attention_mask=attention_mask,
+            output_hidden_states=True, output_attentions=True)
+        
+        logits = self.classifier(pooled_output)
+        
+        loss = None
+        if labels is not None:
+            loss = torch.tensor(0.)
+
+        return SequenceClassifierOutput(
+            loss=loss,
+            logits=logits,
+        )
