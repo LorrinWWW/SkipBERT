@@ -20,10 +20,19 @@ import json
 import logging
 import os
 
-from bert_finetune.file_utils import is_tf_available, is_torch_available
+from .file_utils import is_tf_available, is_torch_available
 
 
 logger = logging.getLogger(__name__)
+
+
+def whitespace_tokenize(text):
+    """Runs basic whitespace cleaning and splitting on a piece of text."""
+    text = text.strip()
+    if not text:
+        return []
+    tokens = text.split()
+    return tokens
 
 
 class InputExample(object):

@@ -412,6 +412,9 @@ def do_train(args):
     student_config.n_gram_left = args.n_gram_left
     student_config.n_gram_right = args.n_gram_right
     student_config.plot_mode = 'plot_passive'
+    student_config.ngram_masking = 0.
+    if not hasattr(student_config, 'enter_hidden_size'):
+        student_config.enter_hidden_size = student_config.hidden_size
         
         
     if not args.do_eval:
