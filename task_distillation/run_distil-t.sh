@@ -1,13 +1,13 @@
 
 rm *.memmap
 
-student_model=../model-6-6-new
+student_model=../model-6-2-new
 
 model_type_student=SkipBert
 
-num_layers_student=12
-num_full_hidden_layers_student=6
-num_masked_layers_teacher=6
+num_layers_student=8
+num_full_hidden_layers_student=2
+num_masked_layers_teacher=0
 num_masked_last_layers_teacher=0
 
 TASK_NAME=CoLA
@@ -16,7 +16,7 @@ eval_steps=50
 epochs_no_cls=0
 batch_size=32
 alpha=1
-lr=2
+lr=5
 epoch=20
 
 beta=0.1
@@ -28,7 +28,7 @@ LOG_OUTPUT_PATH=${OUTPUT_DIR}log_${student_model}.txt
 
 mkdir -p ${OUTPUT_DIR}
         
-CUDA_VISIBLE_DEVICES=0 \
+CUDA_VISIBLE_DEVICES=1 \
 python task_distill.py \
     --train_batch_size ${batch_size} \
     --eval_batch_size 128 \
@@ -43,6 +43,8 @@ python task_distill.py \
     --num_full_hidden_layers_student ${num_full_hidden_layers_student} \
     --num_masked_layers_teacher ${num_masked_layers_teacher} \
     --num_masked_last_layers_teacher ${num_masked_last_layers_teacher} \
+    --att_layer_maps 3 7 \
+    --hid_layer_maps 9 10 11 \
     --epochs_no_cls ${epochs_no_cls} \
     --epochs_no_eval 0 \
     --use_embedding false \
@@ -55,5 +57,5 @@ python task_distill.py \
     --beta ${beta} \
     --eval_step ${eval_steps} \
     --freeze_lower_layers true \
-    --do_fit true \
+    --do_fit false \
     --share_param false

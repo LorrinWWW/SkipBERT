@@ -1,13 +1,13 @@
 
 rm *.memmap
 
-student_model=../model-6-6-new
+student_model=../model-6-4-new
 
 model_type_student=SkipBert
 
-num_layers_student=12
-num_full_hidden_layers_student=6
-num_masked_layers_teacher=6
+num_layers_student=10
+num_full_hidden_layers_student=4
+num_masked_layers_teacher=4
 num_masked_last_layers_teacher=0
 
 TASK_NAME=CoLA
@@ -19,7 +19,7 @@ alpha=1
 lr=2
 epoch=20
 
-beta=0.1
+beta=0.2
 
 teacher_model=./teachers/cola_teacher/
 
@@ -28,7 +28,7 @@ LOG_OUTPUT_PATH=${OUTPUT_DIR}log_${student_model}.txt
 
 mkdir -p ${OUTPUT_DIR}
         
-CUDA_VISIBLE_DEVICES=0 \
+CUDA_VISIBLE_DEVICES=1 \
 python task_distill.py \
     --train_batch_size ${batch_size} \
     --eval_batch_size 128 \

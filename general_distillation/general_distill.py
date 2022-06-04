@@ -148,6 +148,13 @@ def get_argument_parser():
     
     parser.add_argument("--num_full_hidden_layers", default=-1, type=int)
     parser.add_argument("--num_hidden_layers", default=-1, type=int)
+    
+    parser.add_argument('--att_layer_maps',
+                        default=None,
+                        nargs='+', type=int)
+    parser.add_argument('--hid_layer_maps',
+                        default=None,
+                        nargs='+', type=int)
 
     # Additional arguments
     parser.add_argument('--eval_step',
@@ -446,28 +453,49 @@ def main():
                 att_loss = 0.
                 rep_loss = 0.
 
-                teacher_layer_num = len(teacher_atts)
-                student_layer_num = len(student_atts)
-                assert teacher_layer_num % student_layer_num == 0
-                layers_per_block = int(teacher_layer_num / student_layer_num)
-                new_teacher_atts = [teacher_atts[(i + 1) * layers_per_block - 1]
-                                   for i in range(student_layer_num)]
-                assert len(student_atts) == len(new_teacher_atts)
+                if args.att_layer_maps is None:
+                    teacher_layer_num = len(teacher_atts)
+                    student_layer_num = len(student_atts)
+                    assert teacher_layer_num % student_layer_num == 0
+                    layers_per_block = int(teacher_layer_num / student_layer_num)
+                    new_teacher_atts = [teacher_atts[(i + 1) * layers_per_block - 1]
+                                       for i in range(student_layer_num)]
+                    assert len(student_atts) == len(new_teacher_atts)
+                else:
+                    new_teacher_atts = []
+                    for t2s in args.att_layer_maps:
+                        if t2s >= 0:
+                            new_teacher_atts.append(teacher_atts[t2s])
+                        else:
+                            new_teacher_atts.append(None)
                 for student_att, teacher_att in zip(student_atts, new_teacher_atts):
+                    if teacher_att is None:
+                        continue
                     student_att = torch.where(student_att <= -1e2, torch.zeros_like(student_att).to(device),
                                               student_att)
                     teacher_att = torch.where(teacher_att <= -1e2, torch.zeros_like(teacher_att).to(device),
                                               teacher_att)
                     att_loss += F.mse_loss(student_att, teacher_att)
 
-                teacher_layer_num = len(teacher_reps) - 1
-                student_layer_num = len(student_reps) - 1
-                assert teacher_layer_num % student_layer_num == 0
-                layers_per_block = int(teacher_layer_num / student_layer_num)
-                new_teacher_reps = [teacher_reps[i * layers_per_block] for i in range(student_layer_num + 1)]
-                new_student_reps = student_reps
-                assert len(new_student_reps) == len(new_teacher_reps)
+                if args.hid_layer_maps is None:
+                    teacher_layer_num = len(teacher_reps) - 1
+                    student_layer_num = len(student_reps) - 1
+                    assert teacher_layer_num % student_layer_num == 0
+                    layers_per_block = int(teacher_layer_num / student_layer_num)
+                    new_teacher_reps = [teacher_reps[i * layers_per_block] for i in range(student_layer_num + 1)]
+                    new_student_reps = student_reps
+                    assert len(new_student_reps) == len(new_teacher_reps)
+                else:
+                    new_student_reps = student_reps
+                    new_teacher_reps = []
+                    for t2s in args.hid_layer_maps:
+                        if t2s >= 0:
+                            new_teacher_reps.append(teacher_reps[t2s])
+                        else:
+                            new_teacher_reps.append(None)
                 for student_rep, teacher_rep in zip(new_student_reps, new_teacher_reps):
+                    if teacher_rep is None:
+                        continue
                     rep_loss += F.mse_loss(student_rep, teacher_rep)
                     
                 if (not args.not_use_att) and (not args.not_use_hid):

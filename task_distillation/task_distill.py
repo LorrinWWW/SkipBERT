@@ -410,7 +410,8 @@ def do_train(args):
     student_config.task_type = output_mode
     student_config.n_gram_left = args.n_gram_left
     student_config.n_gram_right = args.n_gram_right
-    student_config.plot_mode = 'plot_passive'
+#     student_config.plot_mode = 'plot_passive'
+    student_config.plot_mode = 'force_compute'
     student_config.ngram_masking = 0.
     if not hasattr(student_config, 'enter_hidden_size'):
         student_config.enter_hidden_size = student_config.hidden_size
@@ -549,14 +550,26 @@ def do_train(args):
                 # loss  
                 att_loss = 0.
                 rep_loss = 0.
-                teacher_layer_num = len(teacher_atts)
-                student_layer_num = len(student_atts)
-                assert teacher_layer_num % student_layer_num == 0
-                layers_per_block = int(teacher_layer_num / student_layer_num)
-                new_teacher_atts = [teacher_atts[i * layers_per_block + layers_per_block - 1]
-                                    for i in range(student_layer_num)]
 
+                if args.att_layer_maps is None:
+                    teacher_layer_num = len(teacher_atts)
+                    student_layer_num = len(student_atts)
+                    assert teacher_layer_num % student_layer_num == 0
+                    layers_per_block = int(teacher_layer_num / student_layer_num)
+                    new_teacher_atts = [teacher_atts[(i + 1) * layers_per_block - 1]
+                                       for i in range(student_layer_num)]
+                    assert len(student_atts) == len(new_teacher_atts)
+                else:
+                    new_teacher_atts = []
+                    for t2s in args.att_layer_maps:
+                        if t2s >= 0:
+                            new_teacher_atts.append(teacher_atts[t2s])
+                        else:
+                            new_teacher_atts.append(None)
+                                
                 for student_att, teacher_att in zip(student_atts, new_teacher_atts):
+                    if teacher_att is None:
+                        continue
                     student_att = torch.where(student_att <= -1e2, torch.zeros_like(student_att).to(device),
                                               student_att)
                     teacher_att = torch.where(teacher_att <= -1e2, torch.zeros_like(teacher_att).to(device),
@@ -565,15 +578,26 @@ def do_train(args):
                     tmp_loss = loss_mse(student_att, teacher_att)
                     att_loss += tmp_loss
                     
-
-                teacher_layer_num = len(teacher_reps) - 1
-                student_layer_num = len(student_reps) - 1
-                assert teacher_layer_num % student_layer_num == 0
-                layers_per_block = int(teacher_layer_num / student_layer_num)
-                new_teacher_reps = [teacher_reps[i * layers_per_block] for i in range(student_layer_num + 1)]
-                #new_teacher_reps = teacher_reps
-                new_student_reps = student_reps
+                    
+                if args.hid_layer_maps is None:
+                    teacher_layer_num = len(teacher_reps) - 1
+                    student_layer_num = len(student_reps) - 1
+                    assert teacher_layer_num % student_layer_num == 0
+                    layers_per_block = int(teacher_layer_num / student_layer_num)
+                    new_teacher_reps = [teacher_reps[i * layers_per_block] for i in range(student_layer_num + 1)]
+                    new_student_reps = student_reps
+                    assert len(new_student_reps) == len(new_teacher_reps)
+                else:
+                    new_student_reps = student_reps
+                    new_teacher_reps = []
+                    for t2s in args.hid_layer_maps:
+                        if t2s >= 0:
+                            new_teacher_reps.append(teacher_reps[t2s])
+                        else:
+                            new_teacher_reps.append(None)
                 for student_rep, teacher_rep in zip(new_student_reps, new_teacher_reps):
+                    if teacher_rep is None:
+                        continue
                     tmp_loss = loss_mse(student_rep, teacher_rep)
                     rep_loss += tmp_loss
 
@@ -785,6 +809,13 @@ if __name__ == "__main__":
     
     parser.add_argument('--n_gram_left', type=int, default=1)
     parser.add_argument('--n_gram_right', type=int, default=1)
+    
+    parser.add_argument('--att_layer_maps',
+                        default=None,
+                        nargs='+', type=int)
+    parser.add_argument('--hid_layer_maps',
+                        default=None,
+                        nargs='+', type=int)
 
     args=parser.parse_args()
 
