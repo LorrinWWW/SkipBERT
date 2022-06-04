@@ -24,7 +24,6 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
-sys.path.insert(1, os.path.join(sys.path[0], '../..'))
 
 import numpy as np
 from datasets import load_dataset, load_from_disk, load_metric

@@ -1,5 +1,5 @@
 
-student_model=../../model_6T4Mm_new
+student_model=../model_6T4Mm_new
 
 model_type_student=SkipBert
 
@@ -19,7 +19,7 @@ epoch=20
 
 beta=0.2
 
-teacher_model=../teachers/cola_teacher/
+teacher_model=./teachers/cola_teacher/
 
 OUTPUT_DIR=./model/${TASK_NAME}/
 LOG_OUTPUT_PATH=${OUTPUT_DIR}log_${student_model}.txt
@@ -30,7 +30,7 @@ CUDA_VISIBLE_DEVICES=0 \
 python task_distill.py \
     --train_batch_size ${batch_size} \
     --eval_batch_size 128 \
-    --data_dir ../data/${TASK_NAME}/ \
+    --data_dir ./data/${TASK_NAME}/ \
     --teacher_model ${teacher_model} \
     --student_model ${student_model} \
     --student_model_tokenizer ${student_model} \
