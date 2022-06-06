@@ -568,6 +568,29 @@ class SkipBertModel(BertModel):
         
         return (sequence_output, pooled_output, all_hidden_states, all_self_attentions)
     
+    def freeze_shallow_layers(self):
+        for p in self.embeddings.parameters():
+            p.requires_grad = False
+        for layer in self.encoder.layer[:self.config.num_hidden_layers - self.config.num_full_hidden_layers]:
+            for p in layer.parameters():
+                p.requires_grad = False
+        try:
+            for p in self.shallow_skipping.linear.parameters():
+                p.requires_grad = False
+        except Exception as e:
+            pass
+        try:
+            for p in self.attn.parameters():
+                p.requires_grad = False
+        except Exception as e:
+            pass
+                
+        self.embeddings.dropout.p = 0.
+        for layer in self.encoder.layer[:self.config.num_hidden_layers - self.config.num_full_hidden_layers]:
+            for m in layer.modules():
+                if isinstance(m, torch.nn.Dropout):
+                    m.p = 0.
+    
 
 class SkipBertForPreTraining(BertPreTrainedModel):
     def __init__(self, config):
@@ -598,6 +621,8 @@ class SkipBertForPreTraining(BertPreTrainedModel):
         return att_output, sequence_output
 
     
+    def freeze_shallow_layers(self):
+        self.bert.freeze_shallow_layers()
 
     
 class SkipBertForSequenceClassification(BertPreTrainedModel):
@@ -647,6 +672,9 @@ class SkipBertForSequenceClassification(BertPreTrainedModel):
         logits = self.classifier(pooled_output)
 
         return logits, att_output, sequence_output
+    
+    def freeze_shallow_layers(self):
+        self.bert.freeze_shallow_layers()
     
 
 class SkipBertForSequenceClassificationPrediction(SkipBertForSequenceClassification):

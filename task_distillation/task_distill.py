@@ -424,27 +424,7 @@ def do_train(args):
 
     
     if args.freeze_lower_layers:
-        for p in student_model.bert.embeddings.parameters():
-            p.requires_grad = False
-        for layer in student_model.bert.encoder.layer[:student_config.num_hidden_layers - student_config.num_full_hidden_layers]:
-            for p in layer.parameters():
-                p.requires_grad = False
-        try:
-            for p in student_model.bert.shallow_skipping.linear.parameters():
-                p.requires_grad = False
-        except Exception as e:
-            pass
-        try:
-            for p in student_model.bert.attn.parameters():
-                p.requires_grad = False
-        except Exception as e:
-            pass
-                
-        student_model.bert.embeddings.dropout.p = 0.
-        for layer in student_model.bert.encoder.layer[:student_config.num_hidden_layers - student_config.num_full_hidden_layers]:
-            for m in layer.modules():
-                if isinstance(m, torch.nn.Dropout):
-                    m.p = 0.
+        student_model.freeze_shallow_layers()
     
     if args.do_eval:
         logger.info("***** Running evaluation *****")
