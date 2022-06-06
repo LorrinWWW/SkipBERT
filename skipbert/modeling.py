@@ -155,12 +155,13 @@ class BertForSequenceClassification(BertPreTrainedModel):
         self.hidden_size = config.hidden_size
         self.num_labels = num_labels
         self.bert = BertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(
+            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob)
         self.classifier = nn.Linear(config.hidden_size, num_labels)
         
         self.do_fit, self.share_param = do_fit, share_param
         if self.do_fit:
-            fit_size = config.fit_size
+            fit_size = getattr(config, 'fit_size', 768)
             self.fit_size = fit_size
             if self.share_param:
                 self.fit_dense = nn.Linear(config.hidden_size, fit_size)
@@ -451,6 +452,7 @@ class ShallowSkipping(nn.Module):
             hidden_states = self.plot.retrieve_data(input_ids)
             hidden_states = hidden_states.to(device)
                 
+        hidden_states = F.dropout(hidden_states, self.config.hidden_dropout_prob, self.training)
         hidden_states = self.merge_ngrams(input_ids, hidden_states, aux_embeddings)
         hidden_states = model.norm(hidden_states)
 
@@ -570,7 +572,7 @@ class SkipBertModel(BertModel):
 class SkipBertForPreTraining(BertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
-        self.fit_size = 768
+        fit_size = getattr(config, 'fit_size', 768)
         self.bert = SkipBertModel(config)
         self.cls = BertPreTrainingHeads(config)
         
@@ -605,12 +607,13 @@ class SkipBertForSequenceClassification(BertPreTrainedModel):
         self.hidden_size = config.hidden_size
         self.num_labels = num_labels
         self.bert = SkipBertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(
+            config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob)
         self.classifier = nn.Linear(config.hidden_size, num_labels)
         
         self.do_fit, self.share_param = do_fit, share_param
         if self.do_fit:
-            fit_size = config.fit_size
+            fit_size = getattr(config, 'fit_size', 768)
             self.fit_size = fit_size
             if self.share_param:
                 self.share_fit_dense = nn.Linear(config.hidden_size, fit_size)

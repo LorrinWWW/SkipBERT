@@ -7,13 +7,13 @@ model_type_student=SkipBert
 
 num_layers_student=12
 num_full_hidden_layers_student=6
-num_masked_layers_teacher=6
+num_masked_layers_teacher=0
 num_masked_last_layers_teacher=0
 
 TASK_NAME=CoLA
 task_name=cola
 eval_steps=50
-epochs_no_cls=0
+epochs_no_cls=5
 batch_size=32
 alpha=1
 lr=2
@@ -43,6 +43,8 @@ python task_distill.py \
     --num_full_hidden_layers_student ${num_full_hidden_layers_student} \
     --num_masked_layers_teacher ${num_masked_layers_teacher} \
     --num_masked_last_layers_teacher ${num_masked_last_layers_teacher} \
+    --att_layer_maps 1 3 5 7 9 11 \
+    --hid_layer_maps 6 7 8 9 10 11 12 \
     --epochs_no_cls ${epochs_no_cls} \
     --epochs_no_eval 0 \
     --use_embedding false \
@@ -55,5 +57,5 @@ python task_distill.py \
     --beta ${beta} \
     --eval_step ${eval_steps} \
     --freeze_lower_layers true \
-    --do_fit true \
+    --do_fit false \
     --share_param false

@@ -298,9 +298,7 @@ def get_eval_result(args, device, eval_dataloader, eval_labels, global_step, num
     result['loss'] = loss
     return result
 
-def distillation_loss(y, labels, teacher_scores, output_mode, T, alpha, reduction_kd='mean', reduction_nll='mean', reduce_T=1, is_teacher=True):
-    teacher_T = T if is_teacher else 1
-    rt = T*T/reduce_T if is_teacher else 1
+def distillation_loss(y, labels, teacher_scores, output_mode, T, alpha, reduction_kd='mean', reduction_nll='mean', reduce_T=1):
     if output_mode == "classification":
         if teacher_scores is not None:
             student_likelihood = torch.nn.functional.log_softmax(y / T, dim=-1)
@@ -370,10 +368,7 @@ def do_train(args):
         do_lower_case=args.do_lower_case)
 
     if not args.do_eval:
-        if not args.aug_train:
-            train_examples = processor.get_train_examples(args.data_dir)
-        else:
-            train_examples = processor.get_aug_examples(args.data_dir)
+        train_examples = processor.get_train_examples(args.data_dir)
         if args.gradient_accumulation_steps < 1:
             raise ValueError("Invalid gradient_accumulation_steps parameter: {}, should be >= 1".format(
                 args.gradient_accumulation_steps))
@@ -613,7 +608,7 @@ def do_train(args):
                         _scale = 0.
                         for il, logits in enumerate(student_logits):
                             _loss, _, _ = distillation_loss(
-                                logits, label_ids, teacher_logits, output_mode, T=args.T, alpha=args.alpha, reduce_T=args.reduce_T, is_teacher=args.is_teacher)
+                                logits, label_ids, teacher_logits, output_mode, T=args.T, alpha=args.alpha, reduce_T=args.reduce_T)
                             if cls_loss is None:
                                 cls_loss = _loss
                             else:
@@ -623,7 +618,7 @@ def do_train(args):
                         cls_loss = cls_loss * (1./_scale)
                     else:
                         cls_loss, kd_loss, ce_loss = distillation_loss(
-                            student_logits, label_ids, teacher_logits, output_mode, T=args.T, alpha=args.alpha, reduce_T=args.reduce_T, is_teacher=args.is_teacher)
+                            student_logits, label_ids, teacher_logits, output_mode, T=args.T, alpha=args.alpha, reduce_T=args.reduce_T)
                     
                     tr_cls_loss += cls_loss.item()
                 else:
@@ -787,7 +782,6 @@ if __name__ == "__main__":
 
     parser.add_argument("--cache_dir", default="", type=str)
     parser.add_argument("--max_seq_length", default=128, type=int)
-    parser.add_argument("--emb_linear", default=False, type=str2bool)
     parser.add_argument("--no_pretrain", action='store_true')
     parser.add_argument("--use_init_weight", action='store_true')
     parser.add_argument("--do_fit", default=False, type=str2bool)
@@ -799,10 +793,8 @@ if __name__ == "__main__":
     parser.add_argument("--no_cuda", action='store_true')
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1)
-    parser.add_argument('--aug_train', action='store_true')
     parser.add_argument('--data_url', type=str, default="")
     parser.add_argument('--reduce_T', type=float, default=1.0)
-    parser.add_argument('--is_teacher', type=str2bool, default=True)
     
     parser.add_argument('--epochs_no_cls', type=int, default=0)
     parser.add_argument('--epochs_no_eval', type=int, default=0)
