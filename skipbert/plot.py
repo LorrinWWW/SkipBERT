@@ -39,12 +39,11 @@ def _to_key(k):
 @numba.njit()
 def _input_ids_to_tri_grams(x: np.array):
     bs, seq_len = x.shape
-    ret = np.zeros((bs*seq_len, 3), dtype=np.int64)
+    ret = np.zeros((bs*(seq_len+1), 3), dtype=np.int64)
     i_ret = 0
     for i_bs in range(bs):
         for i_token in range(seq_len):
             if x[i_bs, i_token] == 0:
-                i_ret += 1
                 break
             if i_token == 0:
                 ret[i_ret][1] = x[i_bs, i_token]
@@ -55,6 +54,7 @@ def _input_ids_to_tri_grams(x: np.array):
             else:
                 ret[i_ret] = x[i_bs, i_token-1:i_token+2]
             i_ret += 1
+        i_ret += 1 # add a pad trigram between seqs
     return ret[:i_ret]
 
 
@@ -67,12 +67,11 @@ def _input_ids_to_ngram_ids(d: dict, x: np.array):
     if also not possible, match (0, x1, 0) -> id.
     '''
     bs, seq_len = x.shape
-    ret = np.zeros(bs*seq_len, dtype=np.int64)
+    ret = np.zeros(bs*(seq_len+1), dtype=np.int64)
     i_ret = 0
     for i_bs in range(bs):
         for i_token in range(seq_len):
             if x[i_bs, i_token] == 0:
-                i_ret += 1
                 break
             if i_token == 0:
                 k = (0, x[i_bs, i_token], x[i_bs, i_token+1])
@@ -91,6 +90,7 @@ def _input_ids_to_ngram_ids(d: dict, x: np.array):
                     if k in d: # uni-gram
                         ret[i_ret] = d[k]
             i_ret += 1
+        i_ret += 1 # add a pad trigram between seqs
     return ret[:i_ret]
 
 @numba.njit()
