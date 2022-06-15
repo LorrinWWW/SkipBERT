@@ -345,10 +345,6 @@ class ShallowSkipping(nn.Module):
         
         device = model.device
         
-        print(device)
-        print(token_type_ids.device)
-        print(model.embeddings.position_embeddings2.weight.device)
-        
         batch_size, seq_length = input_ids.shape
         aux_embeddings = model.embeddings.position_embeddings2.weight[:seq_length].unsqueeze(0)
         aux_embeddings = aux_embeddings + model.embeddings.token_type_embeddings2(token_type_ids)
