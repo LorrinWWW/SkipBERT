@@ -222,7 +222,7 @@ class ShallowSkipping(nn.Module):
     
     def __init__(self, model):
         super().__init__()
-        self.model = (model,) # do not register
+#         self.model = model # do not register
         self.config = model.config
         self.shallow_config = model.shallow_config
         # current only support trigram
@@ -283,8 +283,8 @@ class ShallowSkipping(nn.Module):
         past_key_value=None,
         output_attentions=True,
         output_hidden_states=True,
+        model=None,
     ):
-        model = self.model[0]
         device = model.device
         
         input_ngram_ids, token_ngram_type_ids, attention_mask = self.build_input_ngrams(input_ids, token_type_ids)
@@ -340,10 +340,14 @@ class ShallowSkipping(nn.Module):
         past_key_value=None,
         output_attentions=True,
         output_hidden_states=True,
+        model=None,
     ):
         
-        model = self.model[0]
         device = model.device
+        
+        print(device)
+        print(token_type_ids.device)
+        print(model.embeddings.position_embeddings2.weight.device)
         
         batch_size, seq_length = input_ids.shape
         aux_embeddings = model.embeddings.position_embeddings2.weight[:seq_length].unsqueeze(0)
@@ -364,6 +368,7 @@ class ShallowSkipping(nn.Module):
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
                 ngram_mask_position=None,
+                model=model,
             )
             
         elif self.config.plot_mode == 'update_all':
@@ -382,6 +387,7 @@ class ShallowSkipping(nn.Module):
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
                 ngram_mask_position=(0,2),
+                model=model,
             )
             self.plot.update_data(input_ngram_ids, hidden_states)
             
@@ -397,6 +403,7 @@ class ShallowSkipping(nn.Module):
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
                 ngram_mask_position=0,
+                model=model,
             )
             self.plot.update_data(input_ngram_ids, hidden_states)
             
@@ -412,6 +419,7 @@ class ShallowSkipping(nn.Module):
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
                 ngram_mask_position=None,
+                model=model,
             )
             self.plot.update_data(input_ngram_ids, hidden_states)
             
@@ -438,6 +446,7 @@ class ShallowSkipping(nn.Module):
                     output_attentions=output_attentions,
                     output_hidden_states=output_hidden_states,
                     ngram_mask_position=None,
+                    model=model,
                 )
                 self.plot.update_data(input_ngram_ids, hidden_states)
                 
@@ -530,6 +539,7 @@ class SkipBertModel(BertModel):
             head_mask=head_mask,
             encoder_hidden_states=encoder_hidden_states,
             encoder_attention_mask=encoder_attention_mask,
+            model=self,
         )
 
         # Global transformer layers
