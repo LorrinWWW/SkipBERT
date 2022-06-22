@@ -39,7 +39,7 @@ inputs = {
 config = BertConfig.from_pretrained(PATH_TO_MODEL)
 config.plot_mode = 'plot_passive'
 
-model = BertTokenizerFast.from_pretrained(PATH_TO_MODEL, config=config)
+model = SkipBertModel.from_pretrained(PATH_TO_MODEL, config=config)
 model.eval()
 
 # Inference
